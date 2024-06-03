@@ -27,9 +27,10 @@ pipeline {
         stage('Save Docker Image Locally') {
             steps {
                 script {
-                    docker.withRegistry('https://registry.hub.docker.com', 'docker-hub-credentials') {
-                        docker.save("${LOCAL_IMAGE_NAME}.tar", "${DOCKER_IMAGE}")
-                    }
+            withCredentials([usernamePassword(credentialsId: 'your-docker-hub-credentials', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
+                def dockerLoginCmd = "docker login -u $DOCKER_USERNAME --password-stdin https://registry.hub.docker.com"
+                sh "echo \$DOCKER_PASSWORD | ${dockerLoginCmd}"
+            }
                 }
             }
         }
