@@ -1,0 +1,43 @@
+pipeline {
+    agent any
+
+    environment {
+        DOCKER_IMAGE = "hello-world-nginx"
+        CONTAINER_NAME = "hello-world-nginx-container"
+    }
+
+    stages {
+        stage('Clone repository') {
+            steps {
+                git 'https://github.com/anidubonline/cicd.git'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    dockerImage = docker.build("${DOCKER_IMAGE}")
+                }
+            }
+        }
+
+        stage('Stop and Remove Old Container') {
+            steps {
+                script {
+                    def containerExists = sh(script: "docker ps -a --filter 'name=${CONTAINER_NAME}' --format '{{.Names}}'", returnStdout: true).trim()
+                    if (containerExists) {
+                        sh "docker rm -f ${CONTAINER_NAME}"
+                    }
+                }
+            }
+        }
+
+        stage('Run New Container') {
+            steps {
+                script {
+                    dockerImage.run("-d -p 8080:80 --name ${CONTAINER_NAME}")
+                }
+            }
+        }
+    }
+}
