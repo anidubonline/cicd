@@ -4,6 +4,7 @@ pipeline {
     environment {
         DOCKER_IMAGE = "anidubonline/cicd"
         CONTAINER_NAME = "cicd-container"
+        LOCAL_IMAGE_NAME = "local-cicd-image"
     }
 
     stages {
@@ -21,12 +22,10 @@ pipeline {
             }
         }
 
-        stage('Push Docker Image') {
+        stage('Save Docker Image Locally') {
             steps {
                 script {
-                    docker.withRegistry('https://index.docker.io/v1/', 'docker-hub-credentials') {
-                        docker.image("${DOCKER_IMAGE}").push()
-                    }
+                    docker.save("${LOCAL_IMAGE_NAME}.tar", "${DOCKER_IMAGE}")
                 }
             }
         }
@@ -34,10 +33,18 @@ pipeline {
         stage('Deploy') {
             steps {
                 script {
-                    docker.withRegistry('https://index.docker.io/v1/', 'docker-hub-credentials') {
-                        docker.image("${DOCKER_IMAGE}").pull()
-                        docker.image("${DOCKER_IMAGE}").run("-d --name ${CONTAINER_NAME} -p 80:80")
+                    // Загружаем сохраненный Docker-образ в локальное хранилище Docker
+                    docker.load("-i ${LOCAL_IMAGE_NAME}.tar")
+                    
+                    // Удаляем существующий контейнер, если он существует
+                    try {
+                        sh "docker rm -f ${CONTAINER_NAME}"
+                    } catch (Exception e) {
+                        // Если контейнер не существует, игнорируем ошибку
                     }
+                    
+                    // Запускаем новый контейнер с загруженным образом
+                    sh "docker run -d --name ${CONTAINER_NAME} -p 80:80 ${DOCKER_IMAGE}"
                 }
             }
         }
