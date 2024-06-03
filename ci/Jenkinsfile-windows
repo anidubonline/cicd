@@ -1,0 +1,45 @@
+pipeline {
+    agent any
+
+    environment {
+        DOCKER_IMAGE = "anidubonline/cicd"
+        CONTAINER_NAME = "cicd-container"
+        LOCAL_IMAGE_NAME = "local-cicd-image"
+    }
+
+    stages {
+        stage('Clone repository') {
+            steps {
+                // Клонирование репозитория
+                bat 'git clone -b main https://github.com/anidubonline/cicd.git'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                // Сборка Docker-образа
+                bat 'docker build -t ${DOCKER_IMAGE} -f ci\\Dockerfile .'
+            }
+        }
+
+        stage('Save Docker Image Locally') {
+            steps {
+                // Сохранение Docker-образа локально
+                bat "docker save -o ${LOCAL_IMAGE_NAME}.tar ${DOCKER_IMAGE}"
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                // Загрузка сохраненного Docker-образа в локальное хранилище Docker
+                bat "docker load -i ${LOCAL_IMAGE_NAME}.tar"
+                
+                // Удаление существующего контейнера (если он существует)
+                bat "docker rm -f ${CONTAINER_NAME} || exit 0"
+                
+                // Запуск нового контейнера с загруженным образом и привязка его к порту 80 на хосте
+                bat "docker run -d --name ${CONTAINER_NAME} -p 80:80 ${DOCKER_IMAGE}"
+            }
+        }
+    }
+}
