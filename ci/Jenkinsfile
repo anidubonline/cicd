@@ -27,7 +27,7 @@ pipeline {
         stage('Save Docker Image Locally') {
         steps {
             script {
-                docker.save("${LOCAL_IMAGE_NAME}.tar", "${DOCKER_IMAGE}")
+                docker.image("${DOCKER_IMAGE}").save("${LOCAL_IMAGE_NAME}.tar")
             }
         }
     }
