@@ -17,7 +17,9 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    docker.build("${DOCKER_IMAGE}", "-f ci/Dockerfile .")
+                    docker.withRegistry('https://registry.hub.docker.com', 'docker-hub-credentials') {
+                        def customImage = docker.build(DOCKER_IMAGE, "-f ci/Dockerfile .")
+                    }
                 }
             }
         }
@@ -25,7 +27,9 @@ pipeline {
         stage('Save Docker Image Locally') {
             steps {
                 script {
-                    docker.save("${LOCAL_IMAGE_NAME}.tar", "${DOCKER_IMAGE}")
+                    docker.withRegistry('https://registry.hub.docker.com', 'docker-hub-credentials') {
+                        docker.save("${LOCAL_IMAGE_NAME}.tar", "${DOCKER_IMAGE}")
+                    }
                 }
             }
         }
@@ -34,7 +38,9 @@ pipeline {
             steps {
                 script {
                     // Загружаем сохраненный Docker-образ в локальное хранилище Docker
-                    docker.load("-i ${LOCAL_IMAGE_NAME}.tar")
+                    docker.withRegistry('https://registry.hub.docker.com', 'docker-hub-credentials') {
+                        docker.load("-i ${LOCAL_IMAGE_NAME}.tar")
+                    }
                     
                     // Удаляем существующий контейнер, если он существует
                     try {
