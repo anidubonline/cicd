@@ -25,34 +25,28 @@ pipeline {
         }
 
         stage('Save Docker Image Locally') {
-            steps {
-                script {
-            withCredentials([usernamePassword(credentialsId: 'your-docker-hub-credentials', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
-                def dockerLoginCmd = "docker login -u $DOCKER_USERNAME --password-stdin https://registry.hub.docker.com"
-                sh "echo \$DOCKER_PASSWORD | ${dockerLoginCmd}"
-            }
-                }
+        steps {
+            script {
+                docker.save("${LOCAL_IMAGE_NAME}.tar", "${DOCKER_IMAGE}")
             }
         }
+    }
 
-        stage('Deploy') {
-            steps {
-                script {
-                    // Загружаем сохраненный Docker-образ в локальное хранилище Docker
-                    docker.withRegistry('https://registry.hub.docker.com', 'docker-hub-credentials') {
-                        docker.load("-i ${LOCAL_IMAGE_NAME}.tar")
-                    }
-                    
-                    // Удаляем существующий контейнер, если он существует
-                    try {
-                        sh "docker rm -f ${CONTAINER_NAME}"
-                    } catch (Exception e) {
-                        // Если контейнер не существует, игнорируем ошибку
-                    }
-                    
-                    // Запускаем новый контейнер с загруженным образом
-                    sh "docker run -d --name ${CONTAINER_NAME} -p 80:80 ${DOCKER_IMAGE}"
+    stage('Deploy') {
+        steps {
+            script {
+                // Загружаем сохраненный Docker-образ в локальное хранилище Docker
+                docker.load("-i ${LOCAL_IMAGE_NAME}.tar")
+                
+                // Удаляем существующий контейнер, если он существует
+                try {
+                    sh "docker rm -f ${CONTAINER_NAME}"
+                } catch (Exception e) {
+                    // Если контейнер не существует, игнорируем ошибку
                 }
+                
+                // Запускаем новый контейнер с загруженным образом
+                sh "docker run -d --name ${CONTAINER_NAME} -p 80:80 ${DOCKER_IMAGE}"
             }
         }
     }
